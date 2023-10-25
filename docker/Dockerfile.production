@@ -1,0 +1,95 @@
+# syntax = docker/dockerfile:1
+
+ARG RUBY_VERSION=3.0.2
+FROM ruby:$RUBY_VERSION-slim as base
+
+ARG NODE_VERSION=20.0.0
+ARG YARN_VERSION="^1.22.19"
+
+WORKDIR /rails
+
+ENV RUNTIME_DEPS="curl gnupg2 libvips libvips-dev tzdata imagemagick librsvg2-dev libmagickwand-dev postgresql-client" \
+    BUILD_DEPS="build-essential libpq-dev git less pkg-config python-is-python3 node-gyp vim rsync"
+
+FROM base as build
+
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    --mount=type=tmpfs,target=/var/log \
+    rm -f /etc/apt/apt.conf.d/docker-clean; \
+    echo 'Binary::apt::APT::Keep-Downloaded-Packages "true";' > /etc/apt/apt.conf.d/keep-cache; \
+    apt-get update -qq \
+    && DEBIAN_FRONTEND=noninteractive apt-get install -yq --no-install-recommends $BUILD_DEPS $RUNTIME_DEPS
+
+ENV PATH=/usr/local/node/bin:$PATH
+RUN echo     /tmp/node-build-master/bin/node-build "${NODE_VERSION}" /usr/local/node
+RUN curl -sL https://github.com/nodenv/node-build/archive/master.tar.gz | tar xz -C /tmp/ && \
+    /tmp/node-build-master/bin/node-build "$NODE_VERSION" /usr/local/node && \
+    npm install -g yarn@$YARN_VERSION && \
+    rm -rf /tmp/node-build-master
+
+ENV RAILS_ENV="production" \
+    BUNDLE_DEPLOYMENT="1" \
+    BUNDLE_PATH="/usr/local/bundle" \
+    BUNDLE_JOBS="4" \
+    BUNDLE_NO_CACHE="true" \
+    BUNDLE_WITHOUT="development:test" \
+    GEM_HOME="/usr/local/bundle"
+
+COPY Gemfile Gemfile.lock ./
+RUN --mount=type=cache,target=~/.bundle/cache \
+    bundle config --local deployment 'true' \
+    && bundle config --local path "${BUNDLE_PATH}" \
+    && bundle install \
+    && rm -rf ~/.bundle/ "${BUNDLE_PATH}"/ruby/*/cache "${BUNDLE_PATH}"/ruby/*/bundler/gems/*/.git \
+    && bundle exec bootsnap precompile --gemfile
+
+COPY package.json yarn.lock ./
+RUN yarn install --frozen-lockfile
+
+COPY . .
+
+# Precompile bootsnap code for faster boot times
+RUN bundle exec bootsnap precompile app/ lib/
+
+# reduce node memory usage:
+ENV NODE_OPTIONS="--max-old-space-size=4096"
+
+RUN SECRET_KEY_BASE_DUMMY=1 ./bin/rails assets:precompile
+
+# Final stage for app image
+FROM base as app
+
+ENV RAILS_ENV="production" \
+    BUNDLE_DEPLOYMENT="1" \
+    BUNDLE_PATH="/usr/local/bundle" \
+    BUNDLE_NO_CACHE="true" \
+    GEM_HOME="/usr/local/bundle"
+
+# Install packages needed for deployment
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    --mount=type=tmpfs,target=/var/log \
+    apt-get update -qq && \
+    apt-get install --no-install-recommends -y $RUNTIME_DEPS cron
+
+# Copy built artifacts: gems, application
+COPY --from=build /usr/local/bundle /usr/local/bundle
+COPY --from=build /rails /rails
+
+# Run and own only the runtime files as a non-root user for security
+RUN useradd rails --home /rails --shell /bin/bash && \
+    chown -R rails:rails db log tmp
+
+USER rails:rails
+
+# Download the Maxmind GeoIP db locally for geocoding use. Right now I'm
+# using my (JMD's) public Google Drive... 
+RUN curl -sL "https://drive.google.com/uc?export=download&id=1xIu-2vOqkMqHaBBDcDrolcpIBVPwMYP6" --output /rails/db/GeoLite2-City.mmdb
+
+# Entrypoint prepares the database.
+ENTRYPOINT ["/rails/bin/docker-entrypoint"]
+
+# Start the server by default, this can be overwritten at runtime
+EXPOSE 3000
+CMD ["./bin/rails", "server"]

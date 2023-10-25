@@ -1,0 +1,27 @@
+<%= form_with model: (@waitlist_email ||= WaitlistEmail.new),
+      url: waitlist_emails_join_path,
+      class: "mt-8 max-w-xl mx-auto lg:ml-0 w-full sm:w-[400px] md:w-[570px] flex gap-x-5 flex-col gap-y-2.5 lg:flex-row" do |f| %>
+
+  <div class="md:flex md:flex-1 flex-col">
+    <%= f.label :email, "Your best email address", class: "sr-only" %>
+    <%= f.text_field :email,
+          placeholder: "Enter your email",
+          class: "bg-plate-1 border rounded-lg w-full px-2 py-2.5 text-sm font-medium text-foreground-100",
+          required: true,
+          data: {"1p-ignore": true} -%>
+    <% if @waitlist_email.errors[:email].any? %>
+      <ul class="text-sm mt-2">
+        <% @waitlist_email.errors[:email].each do |message| %>
+          <li><%= message %></li>
+        <% end %>
+      </ul>
+    <% end %>
+
+  </div>
+
+  <div>
+    <%= f.submit t("landing_page.waitlist_cta_button").html_safe,
+          class: "flex w-full lg:w-fit items-center text-accent-foreground justify-center rounded-lg bg-accent px-6 py-2.5 font-semibold hover:shadow-lg hover:drop-shadow transition duration-200" %>
+  </div>
+
+<% end %>

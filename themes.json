@@ -1,0 +1,38 @@
+{
+  "light": {
+    "background-plate": "0deg 0% 93%",
+    "plate-1": "0deg 0% 97%",
+    "plate-2": "0deg 0% 100%",
+    "plate-3": "0deg 0% 100%",
+    "primary": "25deg 100% 50%",
+    "secondary": "0deg 0% 0%",
+    "foreground": {
+      "50": "0deg 0% 26%",
+      "100": "0deg 0% 7%"
+    },
+    "accent": {
+      "DEFAULT": "35deg 100% 50%",
+      "foreground": "0deg 0% 0%"
+    },
+    "gradient-1": {
+      "from": "43deg 38% 98%",
+      "to": "226deg 27% 40%"
+    }
+  },
+  "dark": {
+    "background-plate": "0deg 0% 7%",
+    "plate-1": "0deg 0% 13%",
+    "plate-2": "0deg 0% 12%",
+    "plate-3": "0deg 0% 98%",
+    "primary": "25deg 100% 50%",
+    "secondary": "0deg 0% 0%",
+    "foreground": {
+      "50": "0deg 0% 58%",
+      "100": "0deg 0% 100%"
+    },
+    "accent": {
+      "50": "0deg 0% 26%",
+      "100": "200deg 60% 51%"
+    }
+  }
+}

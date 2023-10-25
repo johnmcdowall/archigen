@@ -4,18 +4,17 @@ RAILS_REQUIREMENT = "~> 7.0.0".freeze
 NODE_REQUIREMENTS = ["~> 16.14", ">= 18.0.0"].freeze
 
 def apply_template!
-  assert_minimum_rails_version
+  #assert_minimum_rails_version
   assert_minimum_node_version
   assert_valid_options
   assert_postgresql
   add_template_repository_to_source_path
 
-  if install_vite?
-    self.options = options.merge(
-      css: nil,
-      skip_asset_pipeline: true
-    )
-  end
+  self.options = options.merge({
+    css: nil,
+    skip_asset_pipeline: true,
+    javascript: 'vite'
+  })
 
   template "Gemfile.tt", force: true
 
@@ -26,17 +25,21 @@ def apply_template!
   copy_file "editorconfig", ".editorconfig"
   copy_file "erb-lint.yml", ".erb-lint.yml"
   copy_file "overcommit.yml", ".overcommit.yml"
+  copy_file "themes.json"
   template "node-version.tt", ".node-version", force: true
   template "ruby-version.tt", ".ruby-version", force: true
 
   copy_file "Thorfile"
   copy_file "Procfile"
   copy_file "package.json"
+  copy_file "tailwind.config.js"
 
   apply "Rakefile.rb"
   apply "config.ru.rb"
   apply "bin/template.rb"
   apply "github/template.rb"
+  apply "devcontainer/template.rb"
+  apply "docker/template.rb"
   apply "config/template.rb"
   apply "lib/template.rb"
   apply "test/template.rb"
@@ -57,17 +60,15 @@ def apply_template!
       /vendor/bundle/
     IGNORE
 
-    if install_vite?
-      File.rename("app/javascript", "app/frontend") if File.exist?("app/javascript")
-      run_with_clean_bundler_env "bundle exec vite install"
-      run "yarn remove vite-plugin-ruby"
-      run "yarn add autoprefixer postcss rollup vite-plugin-rails modern-normalize"
-      copy_file "postcss.config.js"
-      copy_file "vite.config.ts", force: true
-      apply "app/frontend/template.rb"
-      rewrite_json("config/vite.json") do |vite_json|
-        vite_json["test"]["autoBuild"] = false
-      end
+    File.rename("app/javascript", "app/frontend") if File.exist?("app/javascript")
+
+    copy_file "postcss.config.js"
+    copy_file "vite.config.ts", force: true
+    run_with_clean_bundler_env "bundle exec vite install"
+    run "yarn add autoprefixer postcss rollup vite-plugin-rails"
+    apply "app/frontend/template.rb"
+    rewrite_json("config/vite.json") do |vite_json|
+      vite_json["test"]["autoBuild"] = false
     end
 
     apply "app/template.rb"
@@ -88,9 +89,24 @@ def apply_template!
     template "stylelintrc.js", ".stylelintrc.js"
     add_yarn_lint_and_run_fix
     add_yarn_start_script
+
+    Thor::Base.shell.new.say_status :OK, "Adding Tailwind and PostCSS configs..."
+    add_tailwind_and_postcss
+    copy_file "tailwind.config.js"
+
     simplify_package_json_deps
 
     append_to_file ".gitignore", "node_modules" unless File.read(".gitignore").match?(%{^/?node_modules})
+
+    setup_authentication_zero!
+    setup_waitlist_email!
+    setup_templates!
+    fixup_mailers!
+    fixup_model_ordering!
+
+    run_with_clean_bundler_env "rails db:migrate"
+    run_with_clean_bundler_env "rails g madmin:install"
+    gsub_file "app/controllers/madmin/application_controller.rb", "# http_basic_authenticate_with", "http_basic_authenticate_with"
 
     run_with_clean_bundler_env "bundle lock --add-platform x86_64-linux"
 
@@ -104,6 +120,84 @@ def apply_template!
       end
     end
   end
+end
+
+def setup_authentication_zero!
+  run_with_clean_bundler_env "bin/rails g authentication --lockable --sudoable --trackable --omniauthable --passwordless --initable --masqueradable --tenantable"
+  run_with_clean_bundler_env "bundle install"
+
+  insert_into_file "app/controllers/home_controller.rb", after: "class HomeController < ApplicationController" do
+  <<-RUBY
+
+  skip_before_action :authenticate
+  RUBY
+  end
+
+  insert_into_file "app/controllers/registrations_controller.rb", after: "skip_before_action :authenticate" do
+    <<-RUBY
+
+    before_action :confirm_signup_eligibility, only: [:create]
+    RUBY
+  end
+
+  insert_into_file "app/controllers/registrations_controller.rb", after: "private" do
+    <<-RUBY
+
+      def confirm_signup_eligibility
+        @waitlist_email = WaitlistEmail.where(email: user_params[:email], approved: true).where.not(confirmed_at: nil).first
+
+        unless @waitlist_email.present?
+          redirect_to root_path, notice: "You are not allowed to signup yet." and return
+        end
+      end
+    RUBY
+  end
+
+  directory "app/views/home/", force: true
+end
+
+def setup_waitlist_email!
+  run_with_clean_bundler_env "bin/rails g model WaitlistEmail email:citext:uniq approved:boolean confirmed_at:timestamp"
+
+  insert_into_file "config/routes.rb", <<-RUBY, before: /^end$/
+    scope :waitlist, as: :waitlist_emails do
+      post "/join", to: "waitlist_emails#create"
+      get "/thanks", to: "waitlist_emails#thanks"
+      get ":id/confirm", to: "waitlist_emails#confirm", as: :confirm
+    end
+  RUBY
+
+  insert_into_file "app/models/waitlist_email.rb", <<-RUBY, after: /class WaitlistEmail < ApplicationRecord$/
+
+    validates :email,
+      presence: { message: "You need to supply an email address to be added to the waitlist." },
+      uniqueness: { case_sensitive: false, message: "This email can't be added to the waitlist." }
+
+    normalizes :email, with: -> { _1.strip.downcase }
+  RUBY
+end
+
+def setup_templates!
+  gsub_file "app/views/layouts/base.html.erb", "<body>", %(<body class="flex flex-col min-h-full bg-background-plate">)
+end
+
+def fixup_mailers!
+  insert_into_file "app/mailers/application_mailer.rb", <<-RUBY, after: /class ApplicationMailer < ActionMailer::Base/
+
+  prepend_view_path "app/views/mailers"
+  RUBY
+
+  copy_file "app/mailers/waitlist_mailer.rb"
+  directory "app/views/mailers/waitlist_mailer"
+  run "mv app/views/user_mailer app/views/mailers/user_mailer"
+  remove_dir "app/views/user_mailer"
+end
+
+def fixup_model_ordering!
+  insert_into_file "app/models/application_record.rb", <<-RUBY, after: /primary_abstract_class/
+  # Sort records by date of creation instead of primary key
+  self.implicit_order_column = :created_at
+  RUBY
 end
 
 require "fileutils"
@@ -165,8 +259,11 @@ def assert_valid_options
     skip_system_test: false,
     skip_test: false,
     skip_test_unit: false,
+    skip_asset_pipeline: true,
+    css: nil,
     edge: false
   }
+
   valid_options.each do |key, expected|
     next unless options.key?(key)
     actual = options[key]
@@ -243,22 +340,76 @@ def run_rubocop_autocorrections
   run_with_clean_bundler_env "bin/erblint --lint-all -a > /dev/null || true"
 end
 
+def find_migration_by_name(migration_name)
+  migrations_dir = File.join('.', 'db', 'migrate')
+  migration_file = Dir.entries(migrations_dir).find do |file|
+    file =~ /.*_#{migration_name}.rb/
+  end
+
+  return unless migration_file
+
+  File.join(migrations_dir, migration_file)
+end
+
 def create_database_and_initial_migration
   return if Dir["db/migrate/**/*.rb"].any?
   run_with_clean_bundler_env "bin/rails db:create"
   run_with_clean_bundler_env "bin/rails generate migration initial_migration"
+
+  initial_migration_file = find_migration_by_name("initial_migration")
+  insert_into_file initial_migration_file, after: /def change/ do
+<<-RUBY
+
+    # All extensions are supported on AWS RDS PG:
+    # https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/CHAP_PostgreSQL.html#PostgreSQL.Concepts.General.FeatureSupport.Extensions.13x
+
+    # Required for generating UUIDs in the DB
+    configure_extension 'pgcrypto'
+
+    # Allows you to see which queries have been running since the last statistics reset, and how they were performing
+    configure_extension 'pg_stat_statements'
+
+    # Case insensitive column type
+    configure_extension 'citext'
+
+    # Allow creating functions and triggers
+    configure_extension 'plpgsql'
+RUBY
+
+  end
+
+  insert_into_file initial_migration_file, before: /def change/ do
+    <<-RUBY
+      def configure_extension(extension_name)
+        enable_extension(extension_name) unless extension_enabled?(extension_name)
+      end
+    RUBY
+  end
 end
 
 def add_yarn_start_script
   return add_package_json_script(start: "bin/dev") if File.exist?("bin/dev")
 
   procs = ["'bin/rails s -b 0.0.0.0'"]
-  procs << "'bin/vite dev'" if File.exist?("bin/vite")
-  procs << "bin/webpack-dev-server" if File.exist?("bin/webpack-dev-server")
+  procs << "'bin/vite dev'"
 
   add_package_json_script(start: "stale-dep && concurrently -i -k --kill-others-on-fail -p none #{procs.join(" ")}")
   add_package_json_script(postinstall: "stale-dep -u")
   run_with_clean_bundler_env "yarn add concurrently stale-dep"
+end
+
+def add_tailwind_and_postcss
+  packages = %w[
+    postcss-import-ext-glob
+    postcss-import
+    tailwindcss
+    @tailwindcss/forms
+    @tailwindcss/typography
+    @tailwindcss/aspect-ratio
+  ]
+
+  run_with_clean_bundler_env "yarn add #{packages.map(&:shellescape).join(' ')}"
+  run_with_clean_bundler_env "yarn fix"
 end
 
 def add_yarn_lint_and_run_fix
@@ -308,7 +459,4 @@ def rewrite_json(file)
   File.write(file, JSON.pretty_generate(json) + "\n")
 end
 
-def install_vite?
-  options[:javascript] == "vite"
-end
 apply_template!

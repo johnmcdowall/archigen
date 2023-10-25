@@ -1,0 +1,47 @@
+{
+    "name": "vocsurveys",
+    "dockerComposeFile": "../.docker/docker-compose.yml",
+    "postStartCommand": "git config --global --add safe.directory ${containerWorkspaceFolder}",
+    "service": "rails",
+    "forwardPorts": [
+        3000
+    ],
+    "mounts": [
+        "source=/etc/localtime,target=/usr/share/zoneinfo/hostlocaltime,type=bind,readonly",
+        "source=${localEnv:HOME}/.ssh,target=/home/vscode/.ssh,type=bind,consistency=cached"
+    ],
+    "workspaceFolder": "/rails",
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                // Ruby Support
+                //
+                // Beautify ERB
+                "aliariff.vscode-erb-beautify",
+                // LSP Support
+                "Shopify.ruby-lsp",
+                // Needed for debug support
+                "rebornix.ruby",
+                // Standard.rb for formatting
+                "testdouble.vscode-standard-ruby",
+                "aki77.rails-db-schema",
+                "ms-vscode.test-adapter-converter",
+                "connorshea.vscode-ruby-test-adapter",
+                "sporto.rails-go-to-spec",
+                "lourenci.go-to-spec",
+                "esbenp.prettier-vscode",
+                "ms-azuretools.vscode-docker",
+                "ryanluker.vscode-coverage-gutters",
+                "davidanson.vscode-markdownlint",
+                "bradlc.vscode-tailwindcss",
+                "sleistner.vscode-fileutils",
+                "streetsidesoftware.code-spell-checker",
+                "vincaslt.highlight-matching-tag",
+                "tscpp.xit",
+                "editorconfig.editorconfig",
+                "vue.volar",
+                "rioj7.html-related-links"
+            ]
+        }
+    }
+}

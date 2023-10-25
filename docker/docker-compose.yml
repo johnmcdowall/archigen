@@ -1,0 +1,206 @@
+version: "3.4"
+
+x-template-app: &template-app
+  build:
+    context: ..
+    dockerfile: .docker/Dockerfile
+  image: vocsurveys_rails:dev
+  tmpfs:
+    - /tmp:exec
+  stdin_open: true
+  tty: true
+  volumes:
+    - ..:/rails:cached
+    - rails_cache:/rails/tmp/cache
+    - bundle:/usr/local/bundle
+    - yarn:/usr/local/yarn
+    - node_modules:/rails/node_modules
+    - ../.docker/.psqlrc:/home/devuser/.psqlrc:ro
+  env_file: ../.env.development
+  environment: &env
+    CHROME_URL: http://chrome:3333
+    NODE_ENV: development
+    RAILS_ENV: ${RAILS_ENV:-development}
+    REDIS_URL: redis://redis:6379
+    BOOTSNAP_CACHE_DIR: /usr/local/bundle/bootsnap
+    WEB_CONCURRENCY: 0
+    HISTFILE: /rails/log/.bash_history
+    PSQL_HISTFILE: /rails/log/.psql_history
+    PGPASSWORD: postgrespw
+    EDITOR: vi
+
+services:
+  traefik:
+    image: "traefik:v2.5"
+    labels:
+      - "traefik.http.services.traefik.loadbalancer.server.port=8080"
+    command:
+      - --configFile=/etc/traefik/traefik.yml # Specify the path to your Traefik configuration
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8080:8080"
+    volumes:
+      - "./traefik:/etc/traefik" # Mount the Traefik configuration directory
+      - "./certs:/tls" # Mount the directory containing your SSL certificates
+      - "../log:/logs/"
+      - "/var/run/docker.sock:/var/run/docker.sock"
+    networks:
+      - default
+      - frontend
+
+  app: &app
+    <<: *template-app
+    labels:
+      - "traefik.enable=false"
+    command: irb
+    depends_on: &app_depends_on
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  rails:
+    <<: *template-app
+    labels:
+      - "traefik.enable=true"
+      # RAILS
+      - "traefik.http.routers.rails-router.service=rails-service"
+      - "traefik.http.routers.rails-router.tls=true"
+      - "traefik.http.routers.rails-router.rule=Host(`vocsurveys.docker`)"
+      - "traefik.http.routers.rails-router.entrypoints=https"
+      - "traefik.http.services.rails-service.loadbalancer.server.port=3000"
+
+      # VITE
+      - "traefik.http.routers.vite-router.service=vite-service"
+      - "traefik.http.routers.vite-router.tls=true"
+      - "traefik.http.routers.vite-router.rule=Host(`vite.vocsurveys.docker`)"
+      - "traefik.http.routers.vite-router.entrypoints=https"
+      - "traefik.http.services.vite-service.loadbalancer.server.port=3036"
+
+    command: ./bin/dev
+    # command:
+    #   - "bash"
+    #   - "-c"
+    #   - >
+    #     rm -f /rails/tmp/pids/server.pid &&
+    #     cd /rails &&
+    #     ./bin/dev
+    ports:
+      - "3000:3000"
+      - "3036:3036"
+    environment:
+      <<: *env
+      VITE_RUBY_HOST: 0.0.0.0
+    networks:
+      - default
+      - frontend
+    depends_on:
+      - app
+    restart: on-failure
+
+  # Separate definition for system tests to add Chrome as a dependency
+  rspec_system:
+    <<: *template-app
+    ports:
+      - "3080:3000"
+      - "50051"
+    environment:
+      <<: *env
+      RAILS_ENV: test
+      APP_HOST: vocsurveys.test
+    depends_on:
+      <<: *app_depends_on
+      chrome:
+        condition: service_started
+    networks:
+      default:
+        aliases:
+          - vocsurveys.test
+
+  mailcatcher:
+    <<: *template-app
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.mailcatcher.tls=true"
+      - "traefik.http.routers.mailcatcher.entrypoints=https"
+      - "traefik.http.routers.mailcatcher.rule=Host(`mailcatcher.vocsurveys.docker`)"
+      - "traefik.http.services.mailcatcher.loadbalancer.server.port=1080"
+    image: dockage/mailcatcher:0.8.2
+    ports:
+      - "1025:1025"
+      - "1080:1080"
+    expose:
+      - "1080"
+    networks:
+      - default
+      - frontend
+    depends_on:
+      - app
+
+  chrome:
+    image: browserless/chrome:1.56-puppeteer-18.0.5
+    ports:
+      - "3333:3333"
+    environment:
+      PORT: 3333
+      # Set connection timeout for debugging
+      # https://docs.browserless.io/docs/docker.html#connection-timeout
+      # CONNECTION_TIMEOUT: 600000
+
+  postgres:
+    labels:
+      - "traefik.enable=false"
+    image: postgres:13
+    environment:
+      - POSTGRES_PASSWORD=postgrespw
+    volumes:
+      - postgres:/var/lib/postgresql/data
+    ports:
+      - 5432
+    healthcheck:
+      test: pg_isready -U postgres -h 127.0.0.1
+      interval: 5s
+
+  redis:
+    labels:
+      - "traefik.enable=false"
+    image: redis:7.0.9-alpine
+    ports:
+      - 6379
+    healthcheck:
+      test: redis-cli ping
+      interval: 1s
+
+  redis-browser:
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.redis-browser.tls=true"
+      - "traefik.http.routers.redis-browser.entrypoints=https"
+      - "traefik.http.routers.redis-browser.rule=Host(`redis.vocsurveys.docker`)"
+      - "traefik.http.services.redis-browser.loadbalancer.server.port=8081"
+      # VITE
+    image: rediscommander/redis-commander
+    environment:
+      REDIS_HOST: redis
+      REDIS_DB: 1
+    ports:
+      - "8081:8081"
+    networks:
+      - default
+      - frontend
+    depends_on:
+      redis:
+        condition: service_healthy
+
+volumes:
+  postgres:
+  redis:
+  bundle:
+  yarn:
+  node_modules:
+  rails_cache:
+
+networks:
+  frontend:
+    name: frontend

@@ -1,0 +1,9 @@
+@layer components {
+  .header {
+    @apply text-red-500;
+
+    & span {
+      font-weight: bold;
+    }
+  }
+}

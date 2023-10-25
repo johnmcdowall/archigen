@@ -1,0 +1,9 @@
+tls:
+  stores:
+    default:
+      defaultCertificate:
+        certFile: /tls/shared.crt
+        keyFile: /tls/shared.key
+  certificates:
+    - certFile: /tls/shared.crt
+      keyFile: /tls/shared.key

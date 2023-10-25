@@ -3,13 +3,6 @@ template "config/database.yml", force: true
 remove_file "config/secrets.yml"
 copy_file "config/sidekiq.yml"
 
-insert_into_file "config/puma.rb", <<~RUBY, after: /:tmp_restart$/
-
-
-  # Automatically open the browser when in development
-  require_relative "../lib/puma/plugin/open"
-  plugin :open
-RUBY
 
 gsub_file "config/routes.rb", /  # root 'welcome#index'/ do
   '  root "home#index"'
@@ -34,3 +27,13 @@ apply "config/environments/test.rb"
 
 route 'root "home#index"'
 route %Q(mount Sidekiq::Web => "/sidekiq" if defined?(Sidekiq) # monitoring console\n)
+
+insert_into_file "config/initializers/inflections.rb", <<~RUBY
+ActiveSupport::Inflector.inflections(:en) do |inflect|
+  inflect.acronym "HTML"
+  inflect.acronym "UI"
+end
+RUBY
+
+remove_file "config/locales/en.yml"
+directory "config/locales"

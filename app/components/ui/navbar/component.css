@@ -1,0 +1,13 @@
+.navbar {
+  .--center-elements {
+    @apply transition duration-200 ease-in text-foreground-100;
+
+    &:hover a:hover {
+      @apply transition duration-200 ease-in-out text-foreground-100;
+    }
+
+    &:hover a:not(:hover) {
+      @apply transition duration-200 ease-in-out text-foreground-50;
+    }
+  }
+}
