@@ -109,6 +109,7 @@ def apply_template!
     gsub_file "app/controllers/madmin/application_controller.rb", "# http_basic_authenticate_with", "http_basic_authenticate_with"
 
     run_with_clean_bundler_env "bundle lock --add-platform x86_64-linux"
+    run_with_clean_bundler_env "rake disposable_email:download"
 
     unless any_local_git_commits?
       git checkout: "-b main"
@@ -171,7 +172,8 @@ def setup_waitlist_email!
 
     validates :email,
       presence: { message: "You need to supply an email address to be added to the waitlist." },
-      uniqueness: { case_sensitive: false, message: "This email can't be added to the waitlist." }
+      uniqueness: { case_sensitive: false, message: "This email can't be added to the waitlist." },
+      disposable_email: true
 
     normalizes :email, with: -> { _1.strip.downcase }
   RUBY

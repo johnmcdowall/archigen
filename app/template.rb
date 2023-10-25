@@ -67,3 +67,6 @@ insert_into_file "app/helpers/application_helper.rb", <<-RUBY, after: 'module Ap
     Rails.application.class.module_parent_name
   end
 RUBY
+
+directory "app/models"
+directory "app/validators"
