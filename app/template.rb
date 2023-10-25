@@ -13,7 +13,7 @@ prepend_to_file "app/views/layouts/base.html.erb", <<~ERB
 <%# The "base" layout contains boilerplate common to *all* views. %>
 ERB
 
-gsub_file "app/views/layouts/base.html.erb", "<html>", %(<html lang="en" class="antialiased h-full text-base" data-theme="light">)
+gsub_file "app/views/layouts/base.html.erb", "<html>", %(<html lang="en" class="antialiased scroll-smooth text-base" data-theme="light">)
 
 insert_into_file "app/views/layouts/base.html.erb", <<-ERB, after: "<head>"
 
