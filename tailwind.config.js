@@ -7,6 +7,7 @@ import themes from "./themes.json";
 
 export default {
   content: [
+    "app/content/**/*",
     "app/views/**/*",
     "app/components/**/*",
     "app/helpers/**/*",

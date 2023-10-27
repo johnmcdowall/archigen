@@ -39,7 +39,7 @@ export default defineConfig({
         postCssImport,
         renamePlugin,
         tailwindcssNesting,
-        tailwindcss,
+        tailwindcss("./tailwind.config.js"),
         autoprefixer,
       ],
     },

@@ -31,6 +31,9 @@ gem "pagy"
 gem "rack-attack"
 gem "rack-canonical-host"
 gem "rails", "~> 7.1"
+
+gem "sitepress-rails"
+gem "markdown-rails"
   
 gem "sidekiq", git: 'https://github.com/sidekiq/sidekiq', branch: :main
 <%= gemfile_entry "stimulus-rails" -%>

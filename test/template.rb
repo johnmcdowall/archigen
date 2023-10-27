@@ -1,5 +1,4 @@
 copy_file "test/test_helper.rb", force: true
-copy_file "test/support/capybara.rb"
 copy_file "test/support/ci.rb"
 copy_file "test/support/factory_bot.rb"
 copy_file "test/support/mailer.rb"
@@ -19,8 +18,4 @@ gsub_file "test/application_system_test_case.rb", /^  driven_by :selenium.*$/, <
      options.add_argument("no-sandbox")
   end
 
-  def setup
-    Capybara.server = :puma, { Silent: true }
-    super
-  end
 RUBY

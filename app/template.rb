@@ -18,7 +18,6 @@ gsub_file "app/views/layouts/base.html.erb", "<html>", %(<html lang="en" class="
 insert_into_file "app/views/layouts/base.html.erb", <<-ERB, after: "<head>"
 
     <!-- #{app_const_base.titleize} <%= Rails.application.config.version %> (<%= l(Rails.application.config.version_time) %>) -->
-    <%= capybara_lockstep if defined?(Capybara::Lockstep) %>
 ERB
 
 gsub_file "app/views/layouts/base.html.erb", %r{^\s*<title>.*</title>}, <<-ERB
@@ -51,7 +50,10 @@ insert_into_file "app/views/layouts/base.html.erb", <<-ERB, after: '<%= vite_jav
 ERB
 
 copy_file "app/views/layouts/application.html.erb"
+copy_file "app/views/layouts/page.html.erb"
 copy_file "app/views/shared/_flash.html.erb"
+copy_file "app/views/shared/_nav.html.erb"
+copy_file "app/views/shared/_footer.html.erb"
 
 directory "app/components", recurse: true
 apply "app/lib/template.rb"

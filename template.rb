@@ -99,6 +99,7 @@ def apply_template!
     append_to_file ".gitignore", "node_modules" unless File.read(".gitignore").match?(%{^/?node_modules})
 
     setup_authentication_zero!
+
     setup_waitlist_email!
     setup_templates!
     fixup_mailers!
@@ -107,6 +108,7 @@ def apply_template!
     run_with_clean_bundler_env "rails db:migrate"
     run_with_clean_bundler_env "rails g madmin:install"
     gsub_file "app/controllers/madmin/application_controller.rb", "# http_basic_authenticate_with", "http_basic_authenticate_with"
+    setup_sitepress!
 
     run_with_clean_bundler_env "bundle lock --add-platform x86_64-linux"
     run_with_clean_bundler_env "rake disposable_email:download"
@@ -121,6 +123,14 @@ def apply_template!
       end
     end
   end
+end
+
+def setup_sitepress!
+  run_with_clean_bundler_env "bin/rails g sitepress:install"
+  run_with_clean_bundler_env "bin/rails g markdown_rails:install"
+  remove_file "app/content/pages/index.html.erb"
+  copy_file "config/initializers/sitepress.rb"
+  directory "app/content"
 end
 
 def setup_authentication_zero!
@@ -155,6 +165,7 @@ def setup_authentication_zero!
   end
 
   directory "app/views/home/", force: true
+  gsub_file "config/routes.rb", 'root "home#index"', ""
 end
 
 def setup_waitlist_email!
