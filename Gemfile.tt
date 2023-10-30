@@ -4,6 +4,8 @@ git_source(:github) { |repo| "https://github.com/#{repo}.git" }
 ruby "<%= RUBY_VERSION %>"
 
 gem "authentication-zero"
+gem "ahoy_matey"
+gem "blazer"
 
 <%= gemfile_entry "bootsnap" -%>
 
@@ -16,12 +18,14 @@ gem "friendly_id"
 gem "heroicon"
 
 gem "http"
+gem "geocoder"
 
 <%= gemfile_entry "pg" -%>
 gem "pgcli-rails"
 <%= gemfile_entry "puma" -%>
 
 gem "madmin"
+gem "maxminddb"
 gem "metamagic"
 
 gem "name_of_person"
@@ -30,7 +34,8 @@ gem "pagy"
 
 gem "rack-attack"
 gem "rack-canonical-host"
-gem "rails", "~> 7.1"
+#gem "rails", "~> 7.1"
+gem "rails", github: "rails/rails", branch: "main"
 
 gem "sitepress-rails"
 gem "markdown-rails"
@@ -38,6 +43,8 @@ gem "markdown-rails"
 gem "sidekiq", git: 'https://github.com/sidekiq/sidekiq', branch: :main
 <%= gemfile_entry "stimulus-rails" -%>
 gem "strong_migrations"
+
+<%= gemfile_entry "propshaft" -%>
 
 <%= gemfile_entry "turbo-rails" -%>
 
@@ -65,6 +72,7 @@ group :development do
   gem "marginalia"
   gem "pry", "~> 0.14.1"
   gem "pry-rails"
+  gem "progressbar"
   gem "ruby-lsp"
   gem "rubocop", require: false
   gem "rubocop-factory_bot", require: false

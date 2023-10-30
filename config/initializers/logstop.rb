@@ -1,3 +1,5 @@
 # frozen_string_literal: true
 
-Logstop.guard(Rails.logger)
+unless Rails.env.local?
+  Logstop.guard(Rails.logger)
+end

@@ -44,6 +44,8 @@ def apply_template!
   apply "lib/template.rb"
   apply "test/template.rb"
 
+  directory "public"
+
   empty_directory_with_keep_file "app/lib"
 
   git :init unless preexisting_git_repo?
@@ -106,9 +108,11 @@ def apply_template!
     fixup_model_ordering!
 
     run_with_clean_bundler_env "rails db:migrate"
-    run_with_clean_bundler_env "rails g madmin:install"
-    gsub_file "app/controllers/madmin/application_controller.rb", "# http_basic_authenticate_with", "http_basic_authenticate_with"
+
+    setup_madmin!
     setup_sitepress!
+    setup_ahoy!
+    setup_blazer!
 
     run_with_clean_bundler_env "bundle lock --add-platform x86_64-linux"
     run_with_clean_bundler_env "rake disposable_email:download"
@@ -123,6 +127,39 @@ def apply_template!
       end
     end
   end
+end
+
+def setup_madmin!
+  run_with_clean_bundler_env "rails g madmin:install"
+  gsub_file "config/routes.rb", "draw :madmin", ""
+
+  insert_into_file "config/routes.rb", <<-RUBY, after: /with_admin_auth do$/
+    draw :madmin
+  RUBY
+end
+
+def setup_ahoy!
+  run_with_clean_bundler_env "bin/rails g ahoy:install"
+  run_with_clean_bundler_env "bin/rails g db:migrate"
+
+  run_with_clean_bundler_env "yarn add ahoy.js"
+  gsub_file "config/initializers/ahoy.rb", "Ahoy.geocode = false", "Ahoy.geocode = true"
+  gsub_file "config/initializers/ahoy.rb", "Ahoy.api = false", "Ahoy.api = true"
+
+  insert_into_file "config/initializers/ahoy.rb", <<-RUBY
+  Ahoy.mask_ips = true
+  Ahoy.cookies = :none
+  Ahoy.user_method = ->(controller) { Current.user }
+  RUBY
+end
+
+def setup_blazer!
+  run_with_clean_bundler_env "bin/rails g blazer:install"
+  run_with_clean_bundler_env "bin/rails db:migrate"
+
+  insert_into_file "config/routes.rb", <<-RUBY, after: /with_admin_auth do$/
+    mount Blazer::Engine, at: "blazer"
+  RUBY
 end
 
 def setup_sitepress!
@@ -164,6 +201,10 @@ def setup_authentication_zero!
     RUBY
   end
 
+  run_with_clean_bundler_env "bin/rails g migration add_admin_to_users admin:boolean"
+  admin_migration_file = find_migration_by_name("add_admin_to_users")
+  gsub_file admin_migration_file, "add_column :users, :admin, :boolean", "add_column :users, :admin, :boolean, default: false"
+
   directory "app/views/home/", force: true
   gsub_file "config/routes.rb", 'root "home#index"', ""
 end
@@ -172,11 +213,12 @@ def setup_waitlist_email!
   run_with_clean_bundler_env "bin/rails g model WaitlistEmail email:citext:uniq approved:boolean confirmed_at:timestamp"
 
   insert_into_file "config/routes.rb", <<-RUBY, before: /^end$/
-    scope :waitlist, as: :waitlist_emails do
-      post "/join", to: "waitlist_emails#create"
-      get "/thanks", to: "waitlist_emails#thanks"
-      get ":id/confirm", to: "waitlist_emails#confirm", as: :confirm
-    end
+
+  scope :waitlist, as: :waitlist_emails do
+    post "/join", to: "waitlist_emails#create"
+    get "/thanks", to: "waitlist_emails#thanks"
+    get ":id/confirm", to: "waitlist_emails#confirm", as: :confirm
+  end
   RUBY
 
   insert_into_file "app/models/waitlist_email.rb", <<-RUBY, after: /class WaitlistEmail < ApplicationRecord$/

@@ -39,7 +39,7 @@ EOT
 
 (cd tmp && docker-compose down && docker-compose up -d)
 
-(cd tmp && rails new archigentest -A --js vite -d postgresql -m ../template.rb)
+(cd tmp && rails new archigentest -a propshaft --js vite -d postgresql -m ../template.rb)
 
 (cd tmp/archigentest && foreman start -p 3000)
 

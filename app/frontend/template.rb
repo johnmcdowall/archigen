@@ -29,8 +29,17 @@ JS
 copy_file "app/frontend/entrypoints/application.css"
 
 # Remove sprockets
-gsub_file "Gemfile", /^gem "sprockets.*\n/, ""
-remove_file "config/initializers/assets.rb"
-remove_dir "app/assets"
-comment_lines "config/environments/development.rb", /^\s*config\.assets\./
-comment_lines "config/environments/production.rb", /^\s*config\.assets\./
+# gsub_file "Gemfile", /^gem "sprockets.*\n/, ""
+# remove_file "config/initializers/assets.rb"
+# remove_dir "app/assets"
+# comment_lines "config/environments/development.rb", /^\s*config\.assets\./
+# comment_lines "config/environments/production.rb", /^\s*config\.assets\./
+
+prepend_to_file "app/frontend/entrypoints/application.js", <<~JS
+import ahoy from "ahoy.js"
+JS
+
+append_to_file "app/frontend/entrypoints/application.js", <<~JS
+window.ahoy = ahoy;
+ahoy.configure({cookies: false});
+JS
