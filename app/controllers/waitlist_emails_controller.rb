@@ -20,7 +20,7 @@ class WaitlistEmailsController < ApplicationController
   end
 
   def confirm
-    @waitlist_email.update(confirmed: true, confirmed_at: Time.now)
+    @waitlist_email.update(confirmed_at: Time.now)
   end
 
   private
