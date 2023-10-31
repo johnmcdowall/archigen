@@ -113,6 +113,7 @@ def apply_template!
     setup_sitepress!
     setup_ahoy!
     setup_blazer!
+    setup_anyway_config!
 
     run_with_clean_bundler_env "bundle lock --add-platform x86_64-linux"
     run_with_clean_bundler_env "rake disposable_email:download"
@@ -127,6 +128,13 @@ def apply_template!
       end
     end
   end
+end
+
+def setup_anyway_config!
+  run_with_clean_bundler_env "rails g anyway:install"
+  run_with_clean_bundler_env "yes | rails g anyway:config admin email"
+
+  copy_file "app/mailers/admin_mailer.rb"
 end
 
 def setup_madmin!
@@ -243,7 +251,7 @@ def fixup_mailers!
   RUBY
 
   copy_file "app/mailers/waitlist_mailer.rb"
-  directory "app/views/mailers/waitlist_mailer"
+
   run "mv app/views/user_mailer app/views/mailers/user_mailer"
   remove_dir "app/views/user_mailer"
 end

@@ -64,6 +64,8 @@ copy_file "app/views/dashboard/index.html.erb"
 copy_file "app/controllers/waitlist_emails_controller.rb"
 directory "app/views/waitlist_emails"
 
+directory "app/views/mailers"
+
 insert_into_file "app/helpers/application_helper.rb", <<-RUBY, after: 'module ApplicationHelper'
   def application_name
     Rails.application.class.module_parent_name
