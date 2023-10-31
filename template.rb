@@ -142,6 +142,7 @@ def setup_madmin!
   gsub_file "config/routes.rb", "draw :madmin", ""
 
   insert_into_file "config/routes.rb", <<-RUBY, after: /with_admin_auth do$/
+
     draw :madmin
   RUBY
 end
@@ -166,6 +167,7 @@ def setup_blazer!
   run_with_clean_bundler_env "bin/rails db:migrate"
 
   insert_into_file "config/routes.rb", <<-RUBY, after: /with_admin_auth do$/
+
     mount Blazer::Engine, at: "blazer"
   RUBY
 end
