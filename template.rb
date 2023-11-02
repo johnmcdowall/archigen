@@ -112,6 +112,7 @@ def apply_template!
     setup_madmin!
     setup_sitepress!
     setup_ahoy!
+    setup_ahoy_captain!
     setup_blazer!
     setup_anyway_config!
 
@@ -159,6 +160,27 @@ def setup_ahoy!
   Ahoy.mask_ips = true
   Ahoy.cookies = :none
   Ahoy.user_method = ->(controller) { Current.user }
+  RUBY
+end
+
+def setup_ahoy_captain!
+  run_with_clean_bundler_env "bin/rails g ahoy_captain:install"
+
+  gsub_file "config/routes.rb", "mount AhoyCaptain::Engine => '/ahoy_captain'", ""
+
+  insert_into_file "config/routes.rb", <<-RUBY, after: /with_admin_auth do$/
+
+    mount AhoyCaptain::Engine => '/ahoy_captain'
+  RUBY
+
+  insert_into_file "app/controllers/application_controller.rb", <<-RUBY, before: /private/
+  after_action :track_action
+
+  protected
+
+  def track_action
+    ahoy.track "Ran action", request.path_parameters
+  end
   RUBY
 end
 

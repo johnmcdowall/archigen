@@ -6,6 +6,7 @@ ruby "<%= RUBY_VERSION %>"
 gem "anyway_config", "~> 2.0"
 gem "authentication-zero"
 gem "ahoy_matey"
+gem "ahoy_captain"
 gem "blazer"
 
 <%= gemfile_entry "bootsnap" -%>
