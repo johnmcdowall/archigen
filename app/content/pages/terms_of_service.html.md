@@ -1,5 +1,6 @@
 ---
-layout: page
+layout: PageLayout
+title: Terms of Service
 ---
 
 # Terms of Service

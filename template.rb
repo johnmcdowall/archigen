@@ -1,58 +1,58 @@
-require "bundler"
-require "json"
-RAILS_REQUIREMENT = "~> 7.0.0".freeze
-NODE_REQUIREMENTS = ["~> 16.14", ">= 18.0.0"].freeze
+require 'bundler'
+require 'json'
+RAILS_REQUIREMENT = '~> 7.0.0'.freeze
+NODE_REQUIREMENTS = ['~> 16.14', '>= 18.0.0'].freeze
 
 def apply_template!
-  #assert_minimum_rails_version
+  # assert_minimum_rails_version
   assert_minimum_node_version
   assert_valid_options
   assert_postgresql
   add_template_repository_to_source_path
 
   self.options = options.merge({
-    css: nil,
-    skip_asset_pipeline: true,
-    javascript: 'vite'
-  })
+                                 css: nil,
+                                 skip_asset_pipeline: true,
+                                 javascript: 'vite'
+                               })
 
-  template "Gemfile.tt", force: true
+  template 'Gemfile.tt', force: true
 
-  template "README.md.tt", force: true
-  remove_file "README.rdoc"
+  template 'README.md.tt', force: true
+  remove_file 'README.rdoc'
 
-  template "example.env.tt"
-  copy_file "editorconfig", ".editorconfig"
-  copy_file "erb-lint.yml", ".erb-lint.yml"
-  copy_file "overcommit.yml", ".overcommit.yml"
-  copy_file "themes.json"
-  template "node-version.tt", ".node-version", force: true
-  template "ruby-version.tt", ".ruby-version", force: true
+  template 'example.env.tt'
+  copy_file 'editorconfig', '.editorconfig'
+  copy_file 'erb-lint.yml', '.erb-lint.yml'
+  copy_file 'overcommit.yml', '.overcommit.yml'
+  copy_file 'themes.json'
+  template 'node-version.tt', '.node-version', force: true
+  template 'ruby-version.tt', '.ruby-version', force: true
 
-  copy_file "Thorfile"
-  copy_file "Procfile"
-  copy_file "package.json"
-  copy_file "tailwind.config.js"
+  copy_file 'Thorfile'
+  copy_file 'Procfile'
+  copy_file 'package.json'
+  copy_file 'tailwind.config.js'
 
-  apply "Rakefile.rb"
-  apply "config.ru.rb"
-  apply "bin/template.rb"
-  apply "github/template.rb"
-  apply "devcontainer/template.rb"
-  apply "docker/template.rb"
-  apply "config/template.rb"
-  apply "lib/template.rb"
-  apply "test/template.rb"
+  apply 'Rakefile.rb'
+  apply 'config.ru.rb'
+  apply 'bin/template.rb'
+  apply 'github/template.rb'
+  apply 'devcontainer/template.rb'
+  apply 'docker/template.rb'
+  apply 'config/template.rb'
+  apply 'lib/template.rb'
+  apply 'test/template.rb'
 
-  directory "public"
+  directory 'public'
 
-  empty_directory_with_keep_file "app/lib"
+  empty_directory_with_keep_file 'app/lib'
 
   git :init unless preexisting_git_repo?
-  empty_directory ".git/safe"
+  empty_directory '.git/safe'
 
   after_bundle do
-    append_to_file ".gitignore", <<~IGNORE
+    append_to_file '.gitignore', <<~IGNORE
 
       # Ignore application config.
       /.env.development
@@ -62,53 +62,53 @@ def apply_template!
       /vendor/bundle/
     IGNORE
 
-    File.rename("app/javascript", "app/frontend") if File.exist?("app/javascript")
+    File.rename('app/javascript', 'app/frontend') if File.exist?('app/javascript')
 
-    copy_file "postcss.config.js"
-    copy_file "vite.config.ts", force: true
-    run_with_clean_bundler_env "bundle exec vite install"
-    run "yarn add autoprefixer postcss rollup vite-plugin-rails"
-    apply "app/frontend/template.rb"
-    rewrite_json("config/vite.json") do |vite_json|
-      vite_json["test"]["autoBuild"] = false
+    copy_file 'postcss.config.js'
+    copy_file 'vite.config.ts', force: true
+    run_with_clean_bundler_env 'bundle exec vite install'
+    run 'yarn add autoprefixer postcss rollup vite-plugin-rails'
+    apply 'app/frontend/template.rb'
+    rewrite_json('config/vite.json') do |vite_json|
+      vite_json['test']['autoBuild'] = false
     end
 
-    apply "app/template.rb"
+    apply 'app/template.rb'
 
     create_database_and_initial_migration
-    run_with_clean_bundler_env "bin/setup"
+    run_with_clean_bundler_env 'bin/setup'
 
     binstubs = %w[brakeman bundler bundler-audit erb_lint rubocop sidekiq thor]
     run_with_clean_bundler_env "bundle binstubs #{binstubs.join(' ')} --force"
 
-    remove_file "Procfile.dev" unless File.exist?("bin/dev")
+    remove_file 'Procfile.dev' unless File.exist?('bin/dev')
 
-    copy_file "rubocop.yml", ".rubocop.yml"
+    copy_file 'rubocop.yml', '.rubocop.yml'
     run_rubocop_autocorrections
 
-    template "eslintrc.js", ".eslintrc.js"
-    template "prettierrc.js", ".prettierrc.js"
-    template "stylelintrc.js", ".stylelintrc.js"
+    template 'eslintrc.js', '.eslintrc.js'
+    template 'prettierrc.js', '.prettierrc.js'
+    template 'stylelintrc.js', '.stylelintrc.js'
     add_yarn_lint_and_run_fix
     add_yarn_start_script
 
-    Thor::Base.shell.new.say_status :OK, "Adding Tailwind and PostCSS configs..."
+    Thor::Base.shell.new.say_status :OK, 'Adding Tailwind and PostCSS configs...'
     add_tailwind_and_postcss
-    copy_file "tailwind.config.js"
+    copy_file 'tailwind.config.js'
 
     simplify_package_json_deps
 
-    append_to_file ".gitignore", "node_modules" unless File.read(".gitignore").match?(%{^/?node_modules})
+    append_to_file '.gitignore', 'node_modules' unless File.read('.gitignore').match?(%(^/?node_modules))
 
     setup_authentication_zero!
 
     setup_waitlist_email!
-    setup_templates!
     fixup_mailers!
     fixup_model_ordering!
 
-    run_with_clean_bundler_env "rails db:migrate"
+    run_with_clean_bundler_env 'rails db:migrate'
 
+    setup_phlex!
     setup_madmin!
     setup_sitepress!
     setup_ahoy!
@@ -116,47 +116,52 @@ def apply_template!
     setup_blazer!
     setup_anyway_config!
 
-    run_with_clean_bundler_env "bundle lock --add-platform x86_64-linux"
-    run_with_clean_bundler_env "rake disposable_email:download"
+    run_with_clean_bundler_env 'bundle lock --add-platform x86_64-linux'
+    run_with_clean_bundler_env 'rake disposable_email:download'
 
     unless any_local_git_commits?
-      git checkout: "-b main"
-      git add: "-A ."
+      git checkout: '-b main'
+      git add: '-A .'
       git commit: "-n -m 'Set up project'"
       if git_repo_specified?
         git remote: "add origin #{git_repo_url.shellescape}"
-        git push: "-u origin --all"
+        git push: '-u origin --all'
       end
     end
   end
 end
 
-def setup_anyway_config!
-  run_with_clean_bundler_env "rails g anyway:install"
-  run_with_clean_bundler_env "yes | rails g anyway:config admin email"
+def setup_phlex!
+  run_with_clean_bundler_env 'bin/rails generate phlex:install'
+  remove_file 'app/views/application_layout.html.erb'
+end
 
-  copy_file "app/mailers/admin_mailer.rb"
+def setup_anyway_config!
+  run_with_clean_bundler_env 'rails g anyway:install'
+  run_with_clean_bundler_env 'yes | rails g anyway:config admin email'
+
+  copy_file 'app/mailers/admin_mailer.rb'
 end
 
 def setup_madmin!
-  run_with_clean_bundler_env "rails g madmin:install"
-  gsub_file "config/routes.rb", "draw :madmin", ""
+  run_with_clean_bundler_env 'rails g madmin:install'
+  gsub_file 'config/routes.rb', 'draw :madmin', ''
 
-  insert_into_file "config/routes.rb", <<-RUBY, after: /with_admin_auth do$/
+  insert_into_file 'config/routes.rb', <<-RUBY, after: /with_admin_auth do$/
 
     draw :madmin
   RUBY
 end
 
 def setup_ahoy!
-  run_with_clean_bundler_env "bin/rails g ahoy:install"
-  run_with_clean_bundler_env "bin/rails g db:migrate"
+  run_with_clean_bundler_env 'bin/rails g ahoy:install'
+  run_with_clean_bundler_env 'bin/rails g db:migrate'
 
-  run_with_clean_bundler_env "yarn add ahoy.js"
-  gsub_file "config/initializers/ahoy.rb", "Ahoy.geocode = false", "Ahoy.geocode = true"
-  gsub_file "config/initializers/ahoy.rb", "Ahoy.api = false", "Ahoy.api = true"
+  run_with_clean_bundler_env 'yarn add ahoy.js'
+  gsub_file 'config/initializers/ahoy.rb', 'Ahoy.geocode = false', 'Ahoy.geocode = true'
+  gsub_file 'config/initializers/ahoy.rb', 'Ahoy.api = false', 'Ahoy.api = true'
 
-  insert_into_file "config/initializers/ahoy.rb", <<-RUBY
+  insert_into_file 'config/initializers/ahoy.rb', <<-RUBY
   Ahoy.mask_ips = true
   Ahoy.cookies = :none
   Ahoy.user_method = ->(controller) { Current.user }
@@ -164,16 +169,16 @@ def setup_ahoy!
 end
 
 def setup_ahoy_captain!
-  run_with_clean_bundler_env "bin/rails g ahoy_captain:install"
+  run_with_clean_bundler_env 'bin/rails g ahoy_captain:install'
 
-  gsub_file "config/routes.rb", "mount AhoyCaptain::Engine => '/ahoy_captain'", ""
+  gsub_file 'config/routes.rb', "mount AhoyCaptain::Engine => '/ahoy_captain'", ''
 
-  insert_into_file "config/routes.rb", <<-RUBY, after: /with_admin_auth do$/
+  insert_into_file 'config/routes.rb', <<-RUBY, after: /with_admin_auth do$/
 
     mount AhoyCaptain::Engine => '/ahoy_captain'
   RUBY
 
-  insert_into_file "app/controllers/application_controller.rb", <<-RUBY, before: /private/
+  insert_into_file 'app/controllers/application_controller.rb', <<-RUBY, before: /private/
   after_action :track_action
 
   protected
@@ -185,42 +190,51 @@ def setup_ahoy_captain!
 end
 
 def setup_blazer!
-  run_with_clean_bundler_env "bin/rails g blazer:install"
-  run_with_clean_bundler_env "bin/rails db:migrate"
+  run_with_clean_bundler_env 'bin/rails g blazer:install'
+  run_with_clean_bundler_env 'bin/rails db:migrate'
 
-  insert_into_file "config/routes.rb", <<-RUBY, after: /with_admin_auth do$/
+  insert_into_file 'config/routes.rb', <<-RUBY, after: /with_admin_auth do$/
 
     mount Blazer::Engine, at: "blazer"
   RUBY
 end
 
 def setup_sitepress!
-  run_with_clean_bundler_env "bin/rails g sitepress:install"
-  run_with_clean_bundler_env "bin/rails g markdown_rails:install"
-  remove_file "app/content/pages/index.html.erb"
-  copy_file "config/initializers/sitepress.rb"
-  directory "app/content"
+  run_with_clean_bundler_env 'bin/rails g sitepress:install'
+  run_with_clean_bundler_env 'bin/rails g markdown_rails:install'
+  remove_file 'app/content/pages/index.html.erb'
+  copy_file 'config/initializers/sitepress.rb'
+  directory 'app/content'
+
+  insert_into_file 'app/controllers/application_controller.rb', <<-RUBY, after: 'class ApplicationController < ActionController::Base'
+
+  layout -> { ApplicationLayout }
+  RUBY
+
+  remove_file 'app/views/layouts/application_layout.html.erb'
+  remove_file 'app/views/layouts/base_layout.html.erb'
+  directory 'app/views/layouts', force: true
 end
 
 def setup_authentication_zero!
-  run_with_clean_bundler_env "bin/rails g authentication --lockable --sudoable --trackable --omniauthable --passwordless --initable --masqueradable --tenantable"
-  run_with_clean_bundler_env "bundle install"
+  run_with_clean_bundler_env 'bin/rails g authentication --lockable --sudoable --trackable --omniauthable --passwordless --initable --masqueradable --tenantable'
+  run_with_clean_bundler_env 'bundle install'
 
-  insert_into_file "app/controllers/home_controller.rb", after: "class HomeController < ApplicationController" do
-  <<-RUBY
+  insert_into_file 'app/controllers/home_controller.rb', after: 'class HomeController < ApplicationController' do
+    <<-RUBY
 
   skip_before_action :authenticate
-  RUBY
+    RUBY
   end
 
-  insert_into_file "app/controllers/registrations_controller.rb", after: "skip_before_action :authenticate" do
+  insert_into_file 'app/controllers/registrations_controller.rb', after: 'skip_before_action :authenticate' do
     <<-RUBY
 
     before_action :confirm_signup_eligibility, only: [:create]
     RUBY
   end
 
-  insert_into_file "app/controllers/registrations_controller.rb", after: "private" do
+  insert_into_file 'app/controllers/registrations_controller.rb', after: 'private' do
     <<-RUBY
 
       def confirm_signup_eligibility
@@ -233,18 +247,19 @@ def setup_authentication_zero!
     RUBY
   end
 
-  run_with_clean_bundler_env "bin/rails g migration add_admin_to_users admin:boolean"
-  admin_migration_file = find_migration_by_name("add_admin_to_users")
-  gsub_file admin_migration_file, "add_column :users, :admin, :boolean", "add_column :users, :admin, :boolean, default: false"
+  run_with_clean_bundler_env 'bin/rails g migration add_admin_to_users admin:boolean'
+  admin_migration_file = find_migration_by_name('add_admin_to_users')
+  gsub_file admin_migration_file, 'add_column :users, :admin, :boolean',
+            'add_column :users, :admin, :boolean, default: false'
 
-  directory "app/views/home/", force: true
-  gsub_file "config/routes.rb", 'root "home#index"', ""
+  directory 'app/views/home/', force: true
+  gsub_file 'config/routes.rb', 'root "home#index"', ''
 end
 
 def setup_waitlist_email!
-  run_with_clean_bundler_env "bin/rails g model WaitlistEmail email:citext:uniq approved:boolean confirmed_at:timestamp"
+  run_with_clean_bundler_env 'bin/rails g model WaitlistEmail email:citext:uniq approved:boolean confirmed_at:timestamp'
 
-  insert_into_file "config/routes.rb", <<-RUBY, before: /^end$/
+  insert_into_file 'config/routes.rb', <<-RUBY, before: /^end$/
 
   scope :waitlist, as: :waitlist_emails do
     post "/join", to: "waitlist_emails#create"
@@ -253,7 +268,7 @@ def setup_waitlist_email!
   end
   RUBY
 
-  insert_into_file "app/models/waitlist_email.rb", <<-RUBY, after: /class WaitlistEmail < ApplicationRecord$/
+  insert_into_file 'app/models/waitlist_email.rb', <<-RUBY, after: /class WaitlistEmail < ApplicationRecord$/
 
     validates :email,
       presence: { message: "You need to supply an email address to be added to the waitlist." },
@@ -264,31 +279,27 @@ def setup_waitlist_email!
   RUBY
 end
 
-def setup_templates!
-  gsub_file "app/views/layouts/base.html.erb", "<body>", %(<body class="flex flex-col min-h-full bg-background-plate">)
-end
-
 def fixup_mailers!
-  insert_into_file "app/mailers/application_mailer.rb", <<-RUBY, after: /class ApplicationMailer < ActionMailer::Base/
+  insert_into_file 'app/mailers/application_mailer.rb', <<-RUBY, after: /class ApplicationMailer < ActionMailer::Base/
 
   prepend_view_path "app/views/mailers"
   RUBY
 
-  copy_file "app/mailers/waitlist_mailer.rb"
+  copy_file 'app/mailers/waitlist_mailer.rb'
 
-  run "mv app/views/user_mailer app/views/mailers/user_mailer"
-  remove_dir "app/views/user_mailer"
+  run 'mv app/views/user_mailer app/views/mailers/user_mailer'
+  remove_dir 'app/views/user_mailer'
 end
 
 def fixup_model_ordering!
-  insert_into_file "app/models/application_record.rb", <<-RUBY, after: /primary_abstract_class/
+  insert_into_file 'app/models/application_record.rb', <<-RUBY, after: /primary_abstract_class/
   # Sort records by date of creation instead of primary key
   self.implicit_order_column = :created_at
   RUBY
 end
 
-require "fileutils"
-require "shellwords"
+require 'fileutils'
+require 'shellwords'
 
 # Add this template directory to source_paths so that Thor actions like
 # copy_file and template resolve against our source files. If this file was
@@ -296,14 +307,14 @@ require "shellwords"
 # In that case, use `git clone` to download them to a local temporary dir.
 def add_template_repository_to_source_path
   if __FILE__ =~ %r{\Ahttps?://}
-    require "tmpdir"
-    source_paths.unshift(tempdir = Dir.mktmpdir("rails-template-"))
+    require 'tmpdir'
+    source_paths.unshift(tempdir = Dir.mktmpdir('rails-template-'))
     at_exit { FileUtils.remove_entry(tempdir) }
     git clone: [
-      "--quiet",
-      "https://github.com/mattbrictson/rails-template.git",
+      '--quiet',
+      'https://github.com/mattbrictson/rails-template.git',
       tempdir
-    ].map(&:shellescape).join(" ")
+    ].map(&:shellescape).join(' ')
 
     if (branch = __FILE__[%r{rails-template/(.+)/template.rb}, 1])
       Dir.chdir(tempdir) { git checkout: branch }
@@ -325,14 +336,18 @@ end
 
 def assert_minimum_node_version
   requirements = NODE_REQUIREMENTS.map { Gem::Requirement.new(_1) }
-  node_version = `node --version`.chomp rescue nil
+  node_version = begin
+    `node --version`.chomp
+  rescue StandardError
+    nil
+  end
   if node_version.nil?
-    fail Rails::Generators::Error, "This template requires Node, but Node does not appear to be installed."
+    raise Rails::Generators::Error, 'This template requires Node, but Node does not appear to be installed.'
   end
 
   return if requirements.any? { _1.satisfied_by?(Gem::Version.new(node_version[/[\d.]+/])) }
 
-  prompt = "This template requires Node #{NODE_REQUIREMENTS.join(" or ")}. "\
+  prompt = "This template requires Node #{NODE_REQUIREMENTS.join(' or ')}. "\
            "You are using #{node_version}. Continue anyway?"
   exit 1 if no?(prompt)
 end
@@ -353,57 +368,58 @@ def assert_valid_options
 
   valid_options.each do |key, expected|
     next unless options.key?(key)
+
     actual = options[key]
-    unless actual == expected
-      fail Rails::Generators::Error, "Unsupported option: #{key}=#{actual}"
-    end
+    raise Rails::Generators::Error, "Unsupported option: #{key}=#{actual}" unless actual == expected
   end
 end
 
 def assert_postgresql
-  return if IO.read("Gemfile") =~ /^\s*gem ['"]pg['"]/
-  fail Rails::Generators::Error, "This template requires PostgreSQL, but the pg gem isn’t present in your Gemfile."
+  return if IO.read('Gemfile') =~ /^\s*gem ['"]pg['"]/
+
+  raise Rails::Generators::Error, 'This template requires PostgreSQL, but the pg gem isn’t present in your Gemfile.'
 end
 
 def git_repo_url
   @git_repo_url ||=
-    ask_with_default("What is the git remote URL for this project?", :blue, "skip")
+    ask_with_default('What is the git remote URL for this project?', :blue, 'skip')
 end
 
 def production_hostname
   @production_hostname ||=
-    ask_with_default("Production hostname?", :blue, "example.com")
+    ask_with_default('Production hostname?', :blue, 'example.com')
 end
 
-def gemfile_entry(name, version=nil, require: true, force: false)
-  @original_gemfile ||= IO.read("Gemfile")
+def gemfile_entry(name, version = nil, require: true, force: false)
+  @original_gemfile ||= IO.read('Gemfile')
   entry = @original_gemfile[/^\s*gem #{Regexp.quote(name.inspect)}.*$/]
   return if entry.nil? && !force
 
-  require = (entry && entry[/\brequire:\s*([\S]+)/, 1]) || require
+  require = (entry && entry[/\brequire:\s*(\S+)/, 1]) || require
   version = (entry && entry[/, "([^"]+)"/, 1]) || version
-  args = [name.inspect, version&.inspect, ("require: false" if require != true)].compact
-  "gem #{args.join(", ")}\n"
+  args = [name.inspect, version&.inspect, ('require: false' if require != true)].compact
+  "gem #{args.join(', ')}\n"
 end
 
 def ask_with_default(question, color, default)
   return default unless $stdin.tty?
-  question = (question.split("?") << " [#{default}]?").join
+
+  question = (question.split('?') << " [#{default}]?").join
   answer = ask(question, color)
   answer.to_s.strip.empty? ? default : answer
 end
 
 def git_repo_specified?
-  git_repo_url != "skip" && !git_repo_url.strip.empty?
+  git_repo_url != 'skip' && !git_repo_url.strip.empty?
 end
 
 def preexisting_git_repo?
-  @preexisting_git_repo ||= (File.exist?(".git") || :nope)
+  @preexisting_git_repo ||= (File.exist?('.git') || :nope)
   @preexisting_git_repo == true
 end
 
 def any_local_git_commits?
-  system("git log > /dev/null 2>&1")
+  system('git log > /dev/null 2>&1')
 end
 
 def run_with_clean_bundler_env(cmd)
@@ -416,15 +432,15 @@ def run_with_clean_bundler_env(cmd)
             else
               run(cmd)
             end
-  unless success
-    puts "Command failed, exiting: #{cmd}"
-    exit(1)
-  end
+  return if success
+
+  puts "Command failed, exiting: #{cmd}"
+  exit(1)
 end
 
 def run_rubocop_autocorrections
-  run_with_clean_bundler_env "bin/rubocop -A --fail-level A > /dev/null || true"
-  run_with_clean_bundler_env "bin/erblint --lint-all -a > /dev/null || true"
+  run_with_clean_bundler_env 'bin/rubocop -A --fail-level A > /dev/null || true'
+  run_with_clean_bundler_env 'bin/erblint --lint-all -a > /dev/null || true'
 end
 
 def find_migration_by_name(migration_name)
@@ -439,13 +455,14 @@ def find_migration_by_name(migration_name)
 end
 
 def create_database_and_initial_migration
-  return if Dir["db/migrate/**/*.rb"].any?
-  run_with_clean_bundler_env "bin/rails db:create"
-  run_with_clean_bundler_env "bin/rails generate migration initial_migration"
+  return if Dir['db/migrate/**/*.rb'].any?
 
-  initial_migration_file = find_migration_by_name("initial_migration")
+  run_with_clean_bundler_env 'bin/rails db:create'
+  run_with_clean_bundler_env 'bin/rails generate migration initial_migration'
+
+  initial_migration_file = find_migration_by_name('initial_migration')
   insert_into_file initial_migration_file, after: /def change/ do
-<<-RUBY
+    <<-RUBY
 
     # All extensions are supported on AWS RDS PG:
     # https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/CHAP_PostgreSQL.html#PostgreSQL.Concepts.General.FeatureSupport.Extensions.13x
@@ -461,8 +478,7 @@ def create_database_and_initial_migration
 
     # Allow creating functions and triggers
     configure_extension 'plpgsql'
-RUBY
-
+    RUBY
   end
 
   insert_into_file initial_migration_file, before: /def change/ do
@@ -475,14 +491,14 @@ RUBY
 end
 
 def add_yarn_start_script
-  return add_package_json_script(start: "bin/dev") if File.exist?("bin/dev")
+  return add_package_json_script(start: 'bin/dev') if File.exist?('bin/dev')
 
   procs = ["'bin/rails s -b 0.0.0.0'"]
   procs << "'bin/vite dev'"
 
-  add_package_json_script(start: "stale-dep && concurrently -i -k --kill-others-on-fail -p none #{procs.join(" ")}")
-  add_package_json_script(postinstall: "stale-dep -u")
-  run_with_clean_bundler_env "yarn add concurrently stale-dep"
+  add_package_json_script(start: "stale-dep && concurrently -i -k --kill-others-on-fail -p none #{procs.join(' ')}")
+  add_package_json_script(postinstall: 'stale-dep -u')
+  run_with_clean_bundler_env 'yarn add concurrently stale-dep'
 end
 
 def add_tailwind_and_postcss
@@ -496,7 +512,7 @@ def add_tailwind_and_postcss
   ]
 
   run_with_clean_bundler_env "yarn add #{packages.map(&:shellescape).join(' ')}"
-  run_with_clean_bundler_env "yarn fix"
+  run_with_clean_bundler_env 'yarn fix'
 end
 
 def add_yarn_lint_and_run_fix
@@ -513,31 +529,31 @@ def add_yarn_lint_and_run_fix
     stylelint-declaration-strict-value
     stylelint-prettier
   ]
-  add_package_json_script("fix": "npm-run-all fix:**")
-  add_package_json_script("fix:js": "npm run -- lint:js --fix")
-  add_package_json_script("fix:css": "npm run -- lint:css --fix")
-  add_package_json_script("lint": "npm-run-all lint:**")
+  add_package_json_script("fix": 'npm-run-all fix:**')
+  add_package_json_script("fix:js": 'npm run -- lint:js --fix')
+  add_package_json_script("fix:css": 'npm run -- lint:css --fix')
+  add_package_json_script("lint": 'npm-run-all lint:**')
   add_package_json_script("lint:js": "stale-dep && eslint 'app/{components,frontend,javascript}/**/*.{js,jsx}'")
   add_package_json_script("lint:css": "stale-dep && stylelint 'app/{components,frontend,assets/stylesheets}/**/*.css'")
-  add_package_json_script("postinstall": "stale-dep -u")
+  add_package_json_script("postinstall": 'stale-dep -u')
   run_with_clean_bundler_env "yarn add #{packages.map(&:shellescape).join(' ')}"
-  run_with_clean_bundler_env "yarn fix"
+  run_with_clean_bundler_env 'yarn fix'
 end
 
 def add_package_json_script(scripts)
   scripts.each do |name, script|
-    run ["npm", "pkg", "set", "scripts.#{name.to_s.shellescape}=#{script.shellescape}"].join(" ")
+    run ['npm', 'pkg', 'set', "scripts.#{name.to_s.shellescape}=#{script.shellescape}"].join(' ')
   end
 end
 
 def simplify_package_json_deps
-  rewrite_json("package.json") do |package_json|
-    package_json["dependencies"] = package_json["dependencies"]
-      .merge(package_json.delete("devDependencies") || {})
-      .sort_by { |key, _| key }
-      .to_h
+  rewrite_json('package.json') do |package_json|
+    package_json['dependencies'] = package_json['dependencies']
+                                   .merge(package_json.delete('devDependencies') || {})
+                                   .sort_by { |key, _| key }
+                                   .to_h
   end
-  run_with_clean_bundler_env "yarn install"
+  run_with_clean_bundler_env 'yarn install'
 end
 
 def rewrite_json(file)

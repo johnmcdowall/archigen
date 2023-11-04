@@ -1,5 +1,6 @@
 ---
-layout: page
+layout: PageLayout
+title: Privacy
 ---
 
 # Privacy

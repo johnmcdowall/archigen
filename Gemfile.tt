@@ -33,6 +33,7 @@ gem "metamagic"
 gem "name_of_person"
 
 gem "pagy"
+gem "phlex-rails"
 
 gem "rack-attack"
 gem "rack-canonical-host"
