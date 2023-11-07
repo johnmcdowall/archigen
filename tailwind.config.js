@@ -13,7 +13,18 @@ export default {
     "app/helpers/**/*",
     "app/frontend/**/*",
   ],
-  theme: {},
+  theme: {
+    extend: {
+      typography: {
+        DEFAULT: {
+          css: {
+            "--tw-prose-body": "hsl(var(--foreground-50))",
+            "--tw-prose-headings": "hsl(var(--foreground-100))",
+          },
+        },
+      },
+    },
+  },
   plugins: [
     tailwindForms,
     tailwindTypography,

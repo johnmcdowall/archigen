@@ -253,7 +253,6 @@ def setup_authentication_zero!
   gsub_file admin_migration_file, 'add_column :users, :admin, :boolean',
             'add_column :users, :admin, :boolean, default: false'
 
-  directory 'app/views/home/', force: true
   gsub_file 'config/routes.rb', 'root "home#index"', ''
 end
 
