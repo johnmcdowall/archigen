@@ -1,32 +1,32 @@
-empty_directory_with_keep_file "app/frontend/fonts"
-empty_directory_with_keep_file "app/frontend/images"
+empty_directory_with_keep_file 'app/frontend/fonts'
+empty_directory_with_keep_file 'app/frontend/images'
 
-copy_file "app/frontend/stylesheets/index.css"
+directory 'app/frontend/stylesheets'
 
-copy_file "app/frontend/images/example.svg"
-copy_file "app/frontend/images/starburst.svg"
-copy_file "app/helpers/inline_svg_helper.rb"
-copy_file "test/helpers/inline_svg_helper_test.rb"
+copy_file 'app/frontend/images/example.svg'
+copy_file 'app/frontend/images/starburst.svg'
+copy_file 'app/helpers/inline_svg_helper.rb'
+copy_file 'test/helpers/inline_svg_helper_test.rb'
 
-copy_file "app/frontend/libs/postcss_rename_component.js"
-copy_file "app/frontend/libs/import_stimulus_controllers.js"
-copy_file "app/frontend/libs/tailwind_multi_theme_plugin.js"
+copy_file 'app/frontend/libs/postcss_rename_component.js'
+copy_file 'app/frontend/libs/import_stimulus_controllers.js'
+copy_file 'app/frontend/libs/tailwind_multi_theme_plugin.js'
 
-prepend_to_file "app/frontend/entrypoints/application.js", <<~JS
+prepend_to_file 'app/frontend/entrypoints/application.js', <<~JS
   import "@hotwired/turbo-rails";
 JS
 
-prepend_to_file "app/frontend/entrypoints/application.js", <<~JS
+prepend_to_file 'app/frontend/entrypoints/application.js', <<~JS
   import "~/controllers";
   import { registerControllers } from "../libs/import_stimulus_controllers";
 JS
 
-append_to_file "app/frontend/entrypoints/application.js", <<~JS
+append_to_file 'app/frontend/entrypoints/application.js', <<~JS
   let controllers = import.meta.globEager("../../components/**/component.js");
   registerControllers(window.Stimulus, controllers);
 JS
 
-copy_file "app/frontend/entrypoints/application.css"
+copy_file 'app/frontend/entrypoints/application.css'
 
 # Remove sprockets
 # gsub_file "Gemfile", /^gem "sprockets.*\n/, ""
@@ -35,11 +35,11 @@ copy_file "app/frontend/entrypoints/application.css"
 # comment_lines "config/environments/development.rb", /^\s*config\.assets\./
 # comment_lines "config/environments/production.rb", /^\s*config\.assets\./
 
-prepend_to_file "app/frontend/entrypoints/application.js", <<~JS
-import ahoy from "ahoy.js"
+prepend_to_file 'app/frontend/entrypoints/application.js', <<~JS
+  import ahoy from "ahoy.js"
 JS
 
-append_to_file "app/frontend/entrypoints/application.js", <<~JS
-window.ahoy = ahoy;
-ahoy.configure({cookies: false});
+append_to_file 'app/frontend/entrypoints/application.js', <<~JS
+  window.ahoy = ahoy;
+  ahoy.configure({cookies: false});
 JS

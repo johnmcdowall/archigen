@@ -6,7 +6,7 @@ class BaseLayout < Phlex::HTML
   def template
     doctype
 
-    html lang: 'en', class: 'antialiased scroll-smooth text-base', data: { theme: 'light' } do
+    html lang: 'en', class: 'antialiased scroll-smooth text-base' do
       head do
         comment { %(Archigentest  (#{Rails.application.config.version}) (#{Rails.application.config.version_time})) }
 

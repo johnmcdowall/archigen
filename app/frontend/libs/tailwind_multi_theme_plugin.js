@@ -26,7 +26,7 @@ function getColorUtilitiesWithCssVariableReferences(input, path = []) {
       } else {
         return [key, `hsl(var(--${newPath.join("-")}) / <alpha-value>)`];
       }
-    })
+    }),
   );
 }
 
@@ -39,20 +39,37 @@ export default function (themes) {
       addBase({
         ":root": getCssVariableDeclarations(Object.values(themes)[0]),
       });
+
       Object.entries(themes).forEach(([key, value]) => {
         addBase({
           [`[data-theme="${key}"]`]: getCssVariableDeclarations(value),
         });
+      });
+
+      addBase({
+        "@media (prefers-color-scheme: dark)": {
+          [`html:not([data-theme]):root`]: getCssVariableDeclarations(
+            Object.values(themes)[1],
+          ),
+        },
+      });
+
+      addBase({
+        "@media (prefers-color-scheme: light)": {
+          [`html:not([data-theme]):root`]: getCssVariableDeclarations(
+            Object.values(themes)[0],
+          ),
+        },
       });
     },
     {
       theme: {
         extend: {
           colors: getColorUtilitiesWithCssVariableReferences(
-            Object.values(themes)[0]
+            Object.values(themes)[0],
           ),
         },
       },
-    }
+    },
   );
 }
