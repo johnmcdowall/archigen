@@ -6,7 +6,7 @@
     <%= f.label :email, "Your best email address", class: "sr-only" %>
     <%= f.text_field :email,
           placeholder: "Enter your email",
-          class: "bg-plate-1 border rounded-lg w-full px-2 py-2.5 text-sm font-medium text-foreground-100",
+          class: "bg-plate-2 border rounded-lg w-full px-2 py-2.5 text-sm font-medium text-foreground-100",
           required: true,
           data: {"1p-ignore": true} -%>
     <% if @waitlist_email.errors[:email].any? %>
