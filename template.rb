@@ -273,6 +273,7 @@ def setup_waitlist_email!
     validates :email,
       presence: { message: "You need to supply an email address to be added to the waitlist." },
       uniqueness: { case_sensitive: false, message: "This email can't be added to the waitlist." },
+      format: {with: URI::MailTo::EMAIL_REGEXP},
       disposable_email: true
 
     normalizes :email, with: -> { _1.strip.downcase }
